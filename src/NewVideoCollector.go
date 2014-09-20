@@ -85,7 +85,7 @@ func registerNewVideos(videos *list.List) {
 		recentlyVideoRows.Scan(&recentlyMovieNo)
 	}
 
-	for video := videos.Back(); video != nil; video = video.Prev() {
+	videoLoop: for video := videos.Back(); video != nil; video = video.Prev() {
 
 		// すでに登録されている動画はスキップする
 		videoObj := video.Value.(map[string]string)
@@ -93,7 +93,7 @@ func registerNewVideos(videos *list.List) {
 			var recentlyMovieNo string
 			recentlyVideoRows.Scan(&recentlyMovieNo)
 			if videoObj["id"] == recentlyMovieNo {
-				continue
+				continue videoLoop
 			}
 		}
 
