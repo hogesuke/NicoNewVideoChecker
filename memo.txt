@@ -1,8 +1,17 @@
 <テーブル>
-movies
+new_videos
+videos
 tags
-contributor
+videos_tags
+contributors
+videos_contributors
+categories
+videos_categories
 mylists
+
+
+users
+fav_contributors
 
 <実装予定機能>
 お気に入りユーザー新着動画一覧
@@ -13,3 +22,4 @@ mylists
 ・同じ投稿者が複数のアカウントを使っている場合、それをどうモデルで表現する？
 ・マイリストをどうやって特定するか。
 　→動画紹介文に複数のマイリストが含まれる場合に、どれがシリーズのマイリストと特定するか（実況動画限定の問題だけど・・・）
+・new_videosのレコードは処理が完了したら消していく？
