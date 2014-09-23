@@ -34,14 +34,18 @@ func selectLastCollectedVideo() (string, string) {
 
 func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 
+	if endVideoId == "" || endDateTime == "" {
+		return nil
+	}
+
 	videos := list.New()
 	next := true;
 	for pageNo := 1; next; pageNo++ {
 		doc := getSearchResultDoc(pageNo)
 
 		doc.Find(".contentBody.uad:not(.searchUad).video .item").Each(func(_ int, s *goquery.Selection) {
-			videoId, _ := s.Attr("data-id")
-			videoNo := regexp.MustCompile("[0-9]+").FindString(videoId)
+			rawVideoId, _ := s.Attr("data-id")
+			videoId := regexp.MustCompile("[0-9]+").FindString(rawVideoId)
 			postDatetime := regexp.MustCompile("[ /:]").ReplaceAllString(s.Find(".itemTime .time:not(.new)").Text(), "")
 			title, _ := s.Find(".itemTitle a").Attr("title")
 
@@ -53,11 +57,11 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 				panic("投稿日時の長さがおかしいですよ")
 			}
 
-			if videoNo == endVideoId || postDatetime < endDateTime {
+			if videoId == endVideoId || postDatetime < endDateTime {
 				next = false;
 				return;
 			}
-			videoMap := map[string]string{"id": videoNo, "datetime": postDatetime, "title": title}
+			videoMap := map[string]string{"id": videoId, "datetime": postDatetime, "title": title}
 			videos.PushBack(videoMap)
 		})
 	}
@@ -113,12 +117,12 @@ func registerNewVideos(videos *list.List) {
 
 func selectRecentlyVideos() *sql.Rows {
 
-	videoNoRows, err := db.Query("SELECT id FROM new_videos WHERE post_datetime = (SELECT MAX(post_datetime) FROM new_videos) ORDER BY post_datetime")
+	videoIdRows, err := db.Query("SELECT id FROM new_videos WHERE post_datetime = (SELECT MAX(post_datetime) FROM new_videos) ORDER BY post_datetime")
 	if err != nil && err != sql.ErrNoRows{
 		panic(err.Error())
 	}
 
-	return videoNoRows
+	return videoIdRows
 }
 
 func main() {

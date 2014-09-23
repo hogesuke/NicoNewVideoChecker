@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	_ "github.com/go-sql-driver/mysql"
-	"fmt"
 	"encoding/xml"
 )
 
@@ -22,17 +21,17 @@ func getDbConnection() *sql.DB {
 }
 
 func selectNewVideos() *sql.Rows {
-	videoNoRows, err := db.Query("SELECT id FROM new_videos ORDER BY post_datetime ASC, id ASC")
+	videoIdRows, err := db.Query("SELECT id, post_datetime FROM new_videos ORDER BY post_datetime ASC, id ASC")
 	if err != nil && err != sql.ErrNoRows {
 		panic(err.Error())
 	}
 
-	return videoNoRows
+	return videoIdRows
 }
 
-func getVideoDetails(videoNo string) {
+func getVideoDetails(videoId string) Thumb {
 	url := "http://ext.nicovideo.jp/api/getthumbinfo/sm"
-	res, err := http.Get(url + videoNo)
+	res, err := http.Get(url + videoId)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -41,20 +40,26 @@ func getVideoDetails(videoNo string) {
 	if err != nil {
 		panic(err.Error())
 	}
-//	fmt.Println(string(body))
 
-	videoXml := Thumb{Thumb: Video{Title: "", Description: "", ThumbnailUrl: "", Length: "", ViewCounter: "", CommentNum: "", MylistCounter: "", Tags: nil}, Status: ""}
+	videoXml := Thumb{Thumb: Video{
+		Title: "",
+		Description: "",
+		ThumbnailUrl: "",
+		Length: "",
+		ViewCounter: "",
+		CommentNum: "",
+		MylistCounter: "",
+		Tags: nil,
+		ContributorId: "",
+		ContributorName: "",
+		ContributorIconUrl: ""},
+		Status: ""}
 	parseErr := xml.Unmarshal([]byte(body), &videoXml)
 	if parseErr != nil {
 		panic(parseErr.Error())
 	}
 
-	fmt.Println("status: ", videoXml.Status)
-	if videoXml.Status != "fail" {
-		fmt.Println("title: ", videoXml.Thumb.Title)
-		fmt.Println("domain: ", videoXml.Thumb.Tags[0].Domain)
-		fmt.Println("tags: ", videoXml.Thumb.Tags[0].Tag)
-	}
+	return videoXml
 }
 
 type Thumb struct {
@@ -71,6 +76,9 @@ type Video struct {
 	CommentNum string `xml:"comment_num"`
 	MylistCounter string `xml:"mylist_counter"`
 	Tags []Tags `xml:"tags"`
+	ContributorId string `xml:"user_id"`
+	ContributorName string `xml:"user_nickname"`
+	ContributorIconUrl string `xml:"user_icon_url"`
 }
 
 type Tags struct {
@@ -78,20 +86,163 @@ type Tags struct {
 	Tag []string `xml:"tag"`
 }
 
+func registerVideoDetails(video Thumb, videoId string, postDatetime string) {
+	insertVideo(video, videoId, postDatetime)
+	registerTags(video.Thumb.Tags, videoId)
+	registerContributor(video, videoId)
+}
+
+func insertVideo(video Thumb, videoId string, postDatetime string) {
+	stmtIns, stmtErr := db.Prepare("INSERT INTO videos (id, title, description, thumbnail_url, post_datetime, length, view_counter, comment_counter, mylist_counter) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)")
+	if stmtErr != nil {
+		panic(stmtErr.Error())
+	}
+	defer stmtIns.Close()
+
+	_, insErr := stmtIns.Exec(
+		videoId,
+		video.Thumb.Title,
+		video.Thumb.Description,
+		video.Thumb.ThumbnailUrl,
+		postDatetime,
+		video.Thumb.Length,
+		video.Thumb.ViewCounter,
+		video.Thumb.CommentNum,
+		video.Thumb.MylistCounter)
+
+	if insErr != nil {
+		panic(insErr.Error())
+	}
+}
+
+func registerTags(tags []Tags, videoId string) {
+	for i, _ := range tags {
+		if tags[i].Domain != "jp" {
+			continue
+		}
+		for j, _ := range tags[i].Tag {
+			tagId := selectTagId(tags[i].Tag[j])
+			if tagId == "" {
+				insertTag(tags[i].Tag[j])
+				tagId = selectTagId(tags[i].Tag[j])
+			}
+			insertVideoTagRelation(videoId, tagId)
+		}
+	}
+}
+
+func selectTagId(tag string) string {
+	stmt, stmtErr := db.Prepare("SELECT id FROM tags WHERE tag = ?")
+	if stmtErr != nil {
+		panic(stmtErr.Error())
+	}
+	defer stmt.Close()
+
+	var tagId string
+	err := stmt.QueryRow(tag).Scan(&tagId)
+	if err != nil && err != sql.ErrNoRows {
+		panic(err.Error())
+	}
+
+	return tagId
+}
+
+func insertTag(tag string) {
+	stmtIns, stmtInsErr := db.Prepare("INSERT INTO tags (tag) VALUES(?)")
+	if stmtInsErr != nil {
+		panic(stmtInsErr.Error())
+	}
+	defer stmtIns.Close()
+
+	_, insErr := stmtIns.Exec(tag)
+	if insErr != nil {
+		panic(insErr.Error())
+	}
+	defer stmtIns.Close()
+}
+
+func insertVideoTagRelation(videoId string, tagId string) {
+	stmtIns, stmtInsErr := db.Prepare("INSERT INTO videos_tags (video_id, tag_id) VALUES(?, ?)")
+	if stmtInsErr != nil {
+		panic(stmtInsErr.Error())
+	}
+	defer stmtIns.Close()
+
+	_, insErr := stmtIns.Exec(videoId, tagId)
+	if insErr != nil {
+		panic(insErr.Error())
+	}
+	defer stmtIns.Close()
+}
+
+func registerContributor(video Thumb, videoId string) {
+	exists := existsContributorId(video.Thumb.ContributorId)
+	if !exists {
+		insertContributor(video.Thumb.ContributorId, video.Thumb.ContributorName, video.Thumb.ContributorIconUrl)
+	}
+	insertVideoContributorRelation(videoId, video.Thumb.ContributorId)
+}
+
+func existsContributorId(contributorId string) bool {
+	stmt, stmtErr := db.Prepare("SELECT id FROM contributors WHERE id = ?")
+	if stmtErr != nil {
+		panic(stmtErr.Error())
+	}
+	defer stmt.Close()
+
+	var selectId string
+	err := stmt.QueryRow(contributorId).Scan(&selectId)
+	if err != nil && err != sql.ErrNoRows {
+		panic(err.Error())
+	}
+
+	if selectId == "" {
+		return false
+	}
+	return true
+}
+
+func insertContributor(contributorId string, contributorName string, contributorIconUrl string) {
+	stmtIns, stmtInsErr := db.Prepare("INSERT INTO contributors (id, name, icon_url) VALUES(?, ?, ?)")
+	if stmtInsErr != nil {
+		panic(stmtInsErr.Error())
+	}
+	defer stmtIns.Close()
+
+	_, insErr := stmtIns.Exec(contributorId, contributorName, contributorIconUrl)
+	if insErr != nil {
+		panic(insErr.Error())
+	}
+	defer stmtIns.Close()
+}
+
+func insertVideoContributorRelation(videoId string, contributorId string) {
+	stmtIns, stmtInsErr := db.Prepare("INSERT INTO videos_contributors (video_id, contributor_id) VALUES(?, ?)")
+	if stmtInsErr != nil {
+		panic(stmtInsErr.Error())
+	}
+	defer stmtIns.Close()
+
+	_, insErr := stmtIns.Exec(videoId, contributorId)
+	if insErr != nil {
+		panic(insErr.Error())
+	}
+	defer stmtIns.Close()
+}
+
 func main() {
 	db = getDbConnection()
 	defer db.Close()
 
-//	getVideoDetails("24512379")
+	videoRows := selectNewVideos()
+	for videoRows.Next() {
+		var videoId string
+		var postDatetime string
+		videoRows.Scan(&videoId, &postDatetime)
+		videoDetails := getVideoDetails(videoId)
 
-	videoNoRows := selectNewVideos()
-	for videoNoRows.Next() {
-		var videoNo string
-		videoNoRows.Scan(&videoNo)
-
-		fmt.Println("")
-		fmt.Println("videoNo : ", videoNo)
-
-		getVideoDetails(videoNo)
+		if videoDetails.Status != "fail" {
+			registerVideoDetails(videoDetails, videoId, postDatetime)
+		}
 	}
 }
