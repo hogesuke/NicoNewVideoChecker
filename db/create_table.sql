@@ -8,6 +8,7 @@ CREATE TABLE new_videos (
 );
 
 CREATE TABLE videos (
+  serial_no INT AUTO_INCREMENT,
   id INT,
   title NVARCHAR(255),
   description NVARCHAR(2047),
@@ -19,7 +20,7 @@ CREATE TABLE videos (
   mylist_counter INT,
   created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
+  PRIMARY KEY (serial_no, id)
 );
 
 CREATE TABLE contributors (
@@ -69,4 +70,21 @@ CREATE TABLE videos_tags (
   created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (video_id, tag_id)
+);
+
+CREATE TABLE users (
+  id INT NOT NULL AUTO_INCREMENT,
+  nicname VARCHAR(32),
+  mail VARCHAR(128),
+  created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+);
+
+CREATE TABLE users_contributors (
+  user_id INT,
+  contributor_id INT,
+  created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, contributor_id)
 );
