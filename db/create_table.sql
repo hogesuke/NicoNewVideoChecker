@@ -88,3 +88,18 @@ CREATE TABLE users_contributors (
   updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, contributor_id)
 );
+
+CREATE TABLE completions (
+  video_id INT,
+  created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (video_id)
+);
+
+CREATE TABLE users_completions (
+  user_id INT,
+  video_id INT,
+  created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, video_id)
+);
