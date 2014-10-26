@@ -2,6 +2,7 @@ CREATE TABLE new_videos (
   id INT,
   title NVARCHAR(255),
   post_datetime CHAR(12),
+  status CHAR(1), -- 0: 未処理, 1: 処理済, 9: 削除済
   created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
@@ -12,6 +13,8 @@ CREATE TABLE videos (
   id INT,
   title NVARCHAR(255),
   description NVARCHAR(2047),
+  contributor_id INT,
+  contributor_name NVARCHAR(32),
   thumbnail_url VARCHAR(511),
   post_datetime CHAR(12),
   length VARCHAR(10),

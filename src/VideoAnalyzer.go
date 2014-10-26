@@ -21,7 +21,7 @@ func getDbConnection() *sql.DB {
 }
 
 func selectNewVideos() *sql.Rows {
-	videoIdRows, err := db.Query("SELECT id, post_datetime FROM new_videos ORDER BY post_datetime ASC, id ASC")
+	videoIdRows, err := db.Query("SELECT id, post_datetime FROM new_videos WHERE status = 0 ORDER BY post_datetime ASC, id ASC")
 	if err != nil && err != sql.ErrNoRows {
 		panic(err.Error())
 	}
@@ -86,14 +86,15 @@ type Tags struct {
 	Tag []string `xml:"tag"`
 }
 
-func registerVideoDetails(video Thumb, videoId string, postDatetime string) {
-	insertVideo(video, videoId, postDatetime)
-	registerTags(video.Thumb.Tags, videoId)
-	registerContributor(video, videoId)
+func registerVideoDetails(tx *sql.Tx, video Thumb, videoId string, postDatetime string) {
+	insertVideo(tx, video, videoId, postDatetime)
+	registerTags(tx, video.Thumb.Tags, videoId)
+	registerContributor(tx, video, videoId)
+	updateNewVideo(tx, videoId, 1)
 }
 
-func insertVideo(video Thumb, videoId string, postDatetime string) {
-	stmtIns, stmtErr := db.Prepare("INSERT INTO videos (id, title, description, thumbnail_url, post_datetime, length, view_counter, comment_counter, mylist_counter) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)")
+func insertVideo(tx *sql.Tx, video Thumb, videoId string, postDatetime string) {
+	stmtIns, stmtErr := tx.Prepare("INSERT INTO videos (id, title, description, thumbnail_url, post_datetime, length, view_counter, comment_counter, mylist_counter) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	if stmtErr != nil {
 		panic(stmtErr.Error())
 	}
@@ -115,24 +116,24 @@ func insertVideo(video Thumb, videoId string, postDatetime string) {
 	}
 }
 
-func registerTags(tags []Tags, videoId string) {
+func registerTags(tx *sql.Tx, tags []Tags, videoId string) {
 	for i, _ := range tags {
 		if tags[i].Domain != "jp" {
 			continue
 		}
 		for j, _ := range tags[i].Tag {
-			tagId := selectTagId(tags[i].Tag[j])
+			tagId := selectTagId(tx, tags[i].Tag[j])
 			if tagId == "" {
-				insertTag(tags[i].Tag[j])
-				tagId = selectTagId(tags[i].Tag[j])
+				insertTag(tx, tags[i].Tag[j])
+				tagId = selectTagId(tx, tags[i].Tag[j])
 			}
-			insertVideoTagRelation(videoId, tagId)
+			insertVideoTagRelation(tx, videoId, tagId)
 		}
 	}
 }
 
-func selectTagId(tag string) string {
-	stmt, stmtErr := db.Prepare("SELECT id FROM tags WHERE tag = ?")
+func selectTagId(tx *sql.Tx, tag string) string {
+	stmt, stmtErr := tx.Prepare("SELECT id FROM tags WHERE tag = ?")
 	if stmtErr != nil {
 		panic(stmtErr.Error())
 	}
@@ -147,8 +148,8 @@ func selectTagId(tag string) string {
 	return tagId
 }
 
-func insertTag(tag string) {
-	stmtIns, stmtInsErr := db.Prepare("INSERT INTO tags (tag) VALUES(?)")
+func insertTag(tx *sql.Tx, tag string) {
+	stmtIns, stmtInsErr := tx.Prepare("INSERT INTO tags (tag) VALUES(?)")
 	if stmtInsErr != nil {
 		panic(stmtInsErr.Error())
 	}
@@ -161,8 +162,8 @@ func insertTag(tag string) {
 	defer stmtIns.Close()
 }
 
-func insertVideoTagRelation(videoId string, tagId string) {
-	stmtIns, stmtInsErr := db.Prepare("INSERT INTO videos_tags (video_id, tag_id) VALUES(?, ?)")
+func insertVideoTagRelation(tx *sql.Tx, videoId string, tagId string) {
+	stmtIns, stmtInsErr := tx.Prepare("INSERT INTO videos_tags (video_id, tag_id) VALUES(?, ?)")
 	if stmtInsErr != nil {
 		panic(stmtInsErr.Error())
 	}
@@ -175,16 +176,16 @@ func insertVideoTagRelation(videoId string, tagId string) {
 	defer stmtIns.Close()
 }
 
-func registerContributor(video Thumb, videoId string) {
-	exists := existsContributorId(video.Thumb.ContributorId)
+func registerContributor(tx *sql.Tx, video Thumb, videoId string) {
+	exists := existsContributorId(tx, video.Thumb.ContributorId)
 	if !exists {
-		insertContributor(video.Thumb.ContributorId, video.Thumb.ContributorName, video.Thumb.ContributorIconUrl)
+		insertContributor(tx, video.Thumb.ContributorId, video.Thumb.ContributorName, video.Thumb.ContributorIconUrl)
 	}
-	insertVideoContributorRelation(videoId, video.Thumb.ContributorId)
+	insertVideoContributorRelation(tx, videoId, video.Thumb.ContributorId)
 }
 
-func existsContributorId(contributorId string) bool {
-	stmt, stmtErr := db.Prepare("SELECT id FROM contributors WHERE id = ?")
+func existsContributorId(tx *sql.Tx, contributorId string) bool {
+	stmt, stmtErr := tx.Prepare("SELECT id FROM contributors WHERE id = ?")
 	if stmtErr != nil {
 		panic(stmtErr.Error())
 	}
@@ -202,8 +203,8 @@ func existsContributorId(contributorId string) bool {
 	return true
 }
 
-func insertContributor(contributorId string, contributorName string, contributorIconUrl string) {
-	stmtIns, stmtInsErr := db.Prepare("INSERT INTO contributors (id, name, icon_url) VALUES(?, ?, ?)")
+func insertContributor(tx *sql.Tx, contributorId string, contributorName string, contributorIconUrl string) {
+	stmtIns, stmtInsErr := tx.Prepare("INSERT INTO contributors (id, name, icon_url) VALUES(?, ?, ?)")
 	if stmtInsErr != nil {
 		panic(stmtInsErr.Error())
 	}
@@ -216,8 +217,8 @@ func insertContributor(contributorId string, contributorName string, contributor
 	defer stmtIns.Close()
 }
 
-func insertVideoContributorRelation(videoId string, contributorId string) {
-	stmtIns, stmtInsErr := db.Prepare("INSERT INTO videos_contributors (video_id, contributor_id) VALUES(?, ?)")
+func insertVideoContributorRelation(tx *sql.Tx, videoId string, contributorId string) {
+	stmtIns, stmtInsErr := tx.Prepare("INSERT INTO videos_contributors (video_id, contributor_id) VALUES(?, ?)")
 	if stmtInsErr != nil {
 		panic(stmtInsErr.Error())
 	}
@@ -228,6 +229,20 @@ func insertVideoContributorRelation(videoId string, contributorId string) {
 		panic(insErr.Error())
 	}
 	defer stmtIns.Close()
+}
+
+func updateNewVideo(tx *sql.Tx, video_id string, status int) {
+	stmtUpd, stmtUpdErr := tx.Prepare("UPDATE new_videos SET status = ? WHERE id = ?")
+	if stmtUpdErr != nil {
+		panic(stmtUpdErr.Error())
+	}
+	defer stmtUpd.Close()
+
+	_, updErr := stmtUpd.Exec(status, video_id)
+	if updErr != nil {
+		panic(updErr.Error())
+	}
+	defer stmtUpd.Close()
 }
 
 func main() {
@@ -241,8 +256,22 @@ func main() {
 		videoRows.Scan(&videoId, &postDatetime)
 		videoDetails := getVideoDetails(videoId)
 
-		if videoDetails.Status != "fail" {
-			registerVideoDetails(videoDetails, videoId, postDatetime)
+		tx, err := db.Begin()
+		if err != nil {
+			panic(err.Error())
 		}
+		defer func() {
+			if recoveredErr := recover(); recoveredErr !=nil {
+				tx.Rollback()
+				panic(recoveredErr)
+			}
+		}()
+
+		if videoDetails.Status == "fail" {
+			updateNewVideo(tx, videoId, 9)
+		} else {
+			registerVideoDetails(tx, videoDetails, videoId, postDatetime)
+		}
+		tx.Commit()
 	}
 }

@@ -6,3 +6,7 @@ DROP TABLE categories;
 DROP TABLE videos_categories;
 DROP TABLE tags;
 DROP TABLE videos_tags;
+DROP TABLE users;
+DROP TABLE users_contributors;
+DROP TABLE completions;
+DROP TABLE users_completions;

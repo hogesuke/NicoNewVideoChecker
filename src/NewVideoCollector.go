@@ -7,6 +7,7 @@ import (
 	"container/list"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/PuerkitoBio/goquery"
+	"time"
 )
 
 /** db connection */
@@ -33,9 +34,12 @@ func selectLastCollectedVideo() (string, string) {
 }
 
 func collectNewVideo(endVideoId string, endDateTime string) *list.List {
+	var count int
+	var limit int
 
 	if endVideoId == "" || endDateTime == "" {
-		return nil
+		count = 0
+		limit = 101
 	}
 
 	videos := list.New()
@@ -50,19 +54,21 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 			title, _ := s.Find(".itemTitle a").Attr("title")
 
 			if len(postDatetime) == 10 {
-				postDatetime = "20"+postDatetime
+				postDatetime = "20" + postDatetime
 			} else if len(postDatetime) == 8 {
-				postDatetime = "2014"+postDatetime
+				// TODO 年越しの際に問題あり。要修正。
+				postDatetime = fmt.Sprint(time.Now().Year()) + postDatetime
 			} else {
 				panic("投稿日時の長さがおかしいですよ")
 			}
 
-			if videoId == endVideoId || postDatetime < endDateTime {
+			if videoId == endVideoId || postDatetime < endDateTime || (limit != 0 && limit <= count) {
 				next = false;
 				return;
 			}
 			videoMap := map[string]string{"id": videoId, "datetime": postDatetime, "title": title}
 			videos.PushBack(videoMap)
+			count++
 		})
 	}
 
@@ -101,14 +107,14 @@ func registerNewVideos(videos *list.List) {
 			}
 		}
 
-		stmtIns, stmtErr := db.Prepare("INSERT INTO new_videos (id, title, post_datetime) VALUES( ?, ?, ?)")
+		stmtIns, stmtErr := db.Prepare("INSERT INTO new_videos (id, title, post_datetime, status) VALUES( ?, ?, ?, ?)")
 		if stmtErr != nil {
 			panic(stmtErr.Error())
 		}
 		defer stmtIns.Close()
 
 		fmt.Println(videoObj["id"], " ", videoObj["datetime"], " ", videoObj["title"])
-		_, insErr := stmtIns.Exec(videoObj["id"], videoObj["title"], videoObj["datetime"])
+		_, insErr := stmtIns.Exec(videoObj["id"], videoObj["title"], videoObj["datetime"], 0)
 		if insErr != nil {
 			panic(insErr.Error())
 		}
