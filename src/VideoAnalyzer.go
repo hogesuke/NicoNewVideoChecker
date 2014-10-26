@@ -94,7 +94,13 @@ func registerVideoDetails(tx *sql.Tx, video Thumb, videoId string, postDatetime 
 }
 
 func insertVideo(tx *sql.Tx, video Thumb, videoId string, postDatetime string) {
-	stmtIns, stmtErr := tx.Prepare("INSERT INTO videos (id, title, description, thumbnail_url, post_datetime, length, view_counter, comment_counter, mylist_counter) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)")
+	stmtIns, stmtErr := tx.Prepare(`
+	INSERT INTO videos
+	(id, title, description, contributor_id, contributor_name,
+	thumbnail_url, post_datetime, length,
+	view_counter, comment_counter, mylist_counter)
+	VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+
 	if stmtErr != nil {
 		panic(stmtErr.Error())
 	}
@@ -104,6 +110,8 @@ func insertVideo(tx *sql.Tx, video Thumb, videoId string, postDatetime string) {
 		videoId,
 		video.Thumb.Title,
 		video.Thumb.Description,
+		video.Thumb.ContributorId,
+		video.Thumb.ContributorName,
 		video.Thumb.ThumbnailUrl,
 		postDatetime,
 		video.Thumb.Length,
