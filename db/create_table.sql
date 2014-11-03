@@ -77,11 +77,13 @@ CREATE TABLE videos_tags (
 
 CREATE TABLE users (
   id INT NOT NULL AUTO_INCREMENT,
-  nicname VARCHAR(32),
-  mail VARCHAR(128),
+  provider_id BIGINT,
+  provider_name VARCHAR(32),
+  raw_name VARCHAR(32),
+  name VARCHAR(32),
   created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id, provider_id)
 );
 
 CREATE TABLE users_contributors (
