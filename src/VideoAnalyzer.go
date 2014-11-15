@@ -276,6 +276,7 @@ func updateNewVideo(tx *sql.Tx, video_id string, status int) {
 }
 
 func main() {
+	loadConfig()
 	db = getDbConnection()
 	defer db.Close()
 
