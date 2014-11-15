@@ -105,7 +105,7 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 }
 
 func getSearchResultDoc(pageNo int) *goquery.Document {
-	url := "http://www.nicovideo.jp/tag/%E5%AE%9F%E6%B3%81%E3%83%97%E3%83%AC%E3%82%A4%E5%8B%95%E7%94%BB"
+	url := "http://www.nicovideo.jp/newarrival"
 	hash := "?sort=f&page=" + fmt.Sprint(pageNo)
 
 	doc, err := goquery.NewDocument(url + hash)
