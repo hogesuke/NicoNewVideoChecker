@@ -1,0 +1,7 @@
+{
+	"db": {
+		"user": "testuser",
+		"pass": "password",
+		"name": "go_lang_test"
+	}
+}
