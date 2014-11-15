@@ -8,13 +8,37 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/PuerkitoBio/goquery"
 	"time"
+	"encoding/json"
+	"io/ioutil"
+	"strconv"
 )
+
+/** configuration */
+var config Config
+
+type Config struct {
+	Db DbConfig `json:"db"`
+}
+
+type DbConfig struct {
+	User string `json:"user"`
+	Pass string `json:"pass"`
+	Name string `json:"name"`
+}
+
+func loadConfig() {
+	file, err := ioutil.ReadFile("./config/config.json")
+	if err != nil {
+		panic(err)
+	}
+	json.Unmarshal(file, &config)
+}
 
 /** db connection */
 var db *sql.DB
 
 func getDbConnection() *sql.DB {
-	db, err := sql.Open("mysql", "testuser:password@/go_lang_test")
+	db, err := sql.Open("mysql", config.Db.User + ":" + config.Db.Pass + "@/" + config.Db.Name)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -56,8 +80,13 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 			if len(postDatetime) == 10 {
 				postDatetime = "20" + postDatetime
 			} else if len(postDatetime) == 8 {
-				// TODO 年越しの際に問題あり。要修正。
-				postDatetime = fmt.Sprint(time.Now().Year()) + postDatetime
+				postMonth, _ := strconv.Atoi(postDatetime[0:2])
+				nowMonth, _ := strconv.Atoi(fmt.Sprint(time.Now().Month()))
+				if nowMonth < postMonth {
+					postDatetime = fmt.Sprint(time.Now().AddDate(-1, 0, 0).Year()) + postDatetime
+				} else {
+					postDatetime = fmt.Sprint(time.Now().Year())+postDatetime
+				}
 			} else {
 				panic("投稿日時の長さがおかしいですよ")
 			}
@@ -132,6 +161,7 @@ func selectRecentlyVideos() *sql.Rows {
 }
 
 func main() {
+	loadConfig()
 	db = getDbConnection()
 	defer db.Close()
 

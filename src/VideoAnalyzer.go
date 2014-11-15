@@ -6,13 +6,35 @@ import (
 	"net/http"
 	_ "github.com/go-sql-driver/mysql"
 	"encoding/xml"
+	"encoding/json"
 )
+
+/** configuration */
+var config Config
+
+type Config struct {
+	Db DbConfig `json:"db"`
+}
+
+type DbConfig struct {
+	User string `json:"user"`
+	Pass string `json:"pass"`
+	Name string `json:"name"`
+}
+
+func loadConfig() {
+	file, err := ioutil.ReadFile("./config/config.json")
+	if err != nil {
+		panic(err)
+	}
+	json.Unmarshal(file, &config)
+}
 
 /** db connection */
 var db *sql.DB
 
 func getDbConnection() *sql.DB {
-	db, err := sql.Open("mysql", "testuser:password@/go_lang_test")
+	db, err := sql.Open("mysql", config.Db.User + ":" + config.Db.Pass + "@/" + config.Db.Name)
 	if err != nil {
 		panic(err.Error())
 	}
