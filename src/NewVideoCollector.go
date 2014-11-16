@@ -71,9 +71,7 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 	for pageNo := 1; next; pageNo++ {
 		doc := getSearchResultDoc(pageNo)
 
-		fmt.Println(doc.Find(".thumb_col_1").Length())
 		doc.Find(".thumb_col_1").Each(func(_ int, s *goquery.Selection) {
-			fmt.Println(videos)
 			videoLink := s.Find(".watch")
 			rawVideoId, _ := videoLink.Attr("href")
 			videoId := regexp.MustCompile("[0-9]+").FindString(rawVideoId)
