@@ -71,13 +71,18 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 	for pageNo := 1; next; pageNo++ {
 		doc := getSearchResultDoc(pageNo)
 
-		doc.Find(".contentBody.uad:not(.searchUad).video .item").Each(func(_ int, s *goquery.Selection) {
-			rawVideoId, _ := s.Attr("data-id")
+		fmt.Println(doc.Find(".thumb_col_1").Length())
+		doc.Find(".thumb_col_1").Each(func(_ int, s *goquery.Selection) {
+			fmt.Println(videos)
+			videoLink := s.Find(".watch")
+			rawVideoId, _ := videoLink.Attr("href")
 			videoId := regexp.MustCompile("[0-9]+").FindString(rawVideoId)
-			postDatetime := regexp.MustCompile("[ /:]").ReplaceAllString(s.Find(".itemTime .time:not(.new)").Text(), "")
-			title, _ := s.Find(".itemTitle a").Attr("title")
+			postDatetime := regexp.MustCompile("[年月日 /:]").ReplaceAllString(s.Find(".thumb_num strong").Text(), "")
+			title, _ := videoLink.Attr("title")
 
-			if len(postDatetime) == 10 {
+			if len(postDatetime) == 12 {
+				// NOP
+			} else if len(postDatetime) == 10 {
 				postDatetime = "20" + postDatetime
 			} else if len(postDatetime) == 8 {
 				postMonth, _ := strconv.Atoi(postDatetime[0:2])
@@ -106,6 +111,7 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 
 func getSearchResultDoc(pageNo int) *goquery.Document {
 	url := "http://www.nicovideo.jp/newarrival"
+//	url := "http://www.nicovideo.jp/tag/%E3%81%82"
 	hash := "?sort=f&page=" + fmt.Sprint(pageNo)
 
 	doc, err := goquery.NewDocument(url + hash)
@@ -113,6 +119,7 @@ func getSearchResultDoc(pageNo int) *goquery.Document {
 		panic(err.Error())
 	}
 
+	fmt.Println(doc)
 	return doc
 }
 
