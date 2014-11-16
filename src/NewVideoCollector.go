@@ -58,13 +58,13 @@ func selectLastCollectedVideo() (string, string) {
 }
 
 func collectNewVideo(endVideoId string, endDateTime string) *list.List {
-	var count int
-	var limit int
+	count := 0
+	limit := 101
 
-	if endVideoId == "" || endDateTime == "" {
-		count = 0
-		limit = 101
-	}
+//	if endVideoId == "" || endDateTime == "" {
+//		count = 0
+//		limit = 101
+//	}
 
 	videos := list.New()
 	next := true;
