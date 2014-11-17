@@ -1,11 +1,12 @@
 CREATE TABLE new_videos (
+  serial_no INT AUTO_INCREMENT,
   id INT,
   title NVARCHAR(255),
   post_datetime CHAR(12),
   status CHAR(1), -- 0: 未処理, 1: 処理済, 9: 削除済
   created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
+  PRIMARY KEY (serial_no, id)
 );
 
 CREATE TABLE videos (

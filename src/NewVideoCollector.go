@@ -59,7 +59,7 @@ func selectLastCollectedVideo() (string, string) {
 
 func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 	count := 0
-	limit := 101
+	limit := 300
 
 //	if endVideoId == "" || endDateTime == "" {
 //		count = 0
@@ -109,7 +109,6 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 
 func getSearchResultDoc(pageNo int) *goquery.Document {
 	url := "http://www.nicovideo.jp/newarrival"
-//	url := "http://www.nicovideo.jp/tag/%E3%81%82"
 	hash := "?sort=f&page=" + fmt.Sprint(pageNo)
 
 	doc, err := goquery.NewDocument(url + hash)
@@ -117,7 +116,6 @@ func getSearchResultDoc(pageNo int) *goquery.Document {
 		panic(err.Error())
 	}
 
-	fmt.Println(doc)
 	return doc
 }
 
