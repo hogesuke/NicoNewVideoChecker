@@ -122,21 +122,25 @@ func getSearchResultDoc(pageNo int) *goquery.Document {
 func registerNewVideos(videos *list.List) {
 	recentlyVideoRows := selectRecentlyVideos()
 
+	for recentlyVideoRows.Next() {
+		var recentlyMovieNo string
+		recentlyVideoRows.Scan(&recentlyMovieNo)
+
+		// すでに登録されている動画はスキップする
+		for video := videos.Back(); video != nil; video = video.Prev() {
+			videoObj := video.Value.(map[string]string)
+			if recentlyMovieNo == videoObj["id"] {
+				videos.Remove(video)
+			}
+		}
+	}
+
 	insertCount := 0
 	startVideoId := ""
 	endVideoId := ""
 
-	videoLoop: for video := videos.Back(); video != nil; video = video.Prev() {
-
-		// すでに登録されている動画はスキップする
+	for video := videos.Back(); video != nil; video = video.Prev() {
 		videoObj := video.Value.(map[string]string)
-		for recentlyVideoRows.Next() {
-			var recentlyMovieNo string
-			recentlyVideoRows.Scan(&recentlyMovieNo)
-			if videoObj["id"] == recentlyMovieNo {
-				continue videoLoop
-			}
-		}
 
 		stmtIns, stmtErr := db.Prepare("INSERT INTO new_videos (id, title, post_datetime, status) VALUES( ?, ?, ?, ?)")
 		if stmtErr != nil {
