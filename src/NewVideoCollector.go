@@ -167,7 +167,7 @@ func registerNewVideos(videos *list.List) {
 
 func selectRecentlyVideos() *sql.Rows {
 
-	videoIdRows, err := db.Query("SELECT id FROM new_videos WHERE post_datetime = (SELECT MAX(post_datetime) FROM new_videos) ORDER BY post_datetime")
+	videoIdRows, err := db.Query("SELECT id FROM new_videos WHERE post_datetime = (SELECT MIN(post_datetime) FROM new_videos) ORDER BY post_datetime")
 	if err != nil && err != sql.ErrNoRows{
 		panic(err.Error())
 	}
