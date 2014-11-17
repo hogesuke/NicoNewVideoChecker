@@ -111,7 +111,7 @@ func getSearchResultDoc(pageNo int) *goquery.Document {
 	url := "http://www.nicovideo.jp/newarrival"
 	hash := "?sort=f&page=" + fmt.Sprint(pageNo)
 
-	doc, err := goquery.NewDocument(url + hash)
+	doc, err:= goquery.NewDocument(url + hash)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -121,11 +121,6 @@ func getSearchResultDoc(pageNo int) *goquery.Document {
 
 func registerNewVideos(videos *list.List) {
 	recentlyVideoRows := selectRecentlyVideos()
-
-	for recentlyVideoRows.Next() {
-		var recentlyMovieNo string
-		recentlyVideoRows.Scan(&recentlyMovieNo)
-	}
 
 	insertCount := 0
 	startVideoId := ""
@@ -167,7 +162,7 @@ func registerNewVideos(videos *list.List) {
 
 func selectRecentlyVideos() *sql.Rows {
 
-	videoIdRows, err := db.Query("SELECT id FROM new_videos WHERE post_datetime = (SELECT MIN(post_datetime) FROM new_videos) ORDER BY post_datetime")
+	videoIdRows, err := db.Query("SELECT id FROM new_videos WHERE post_datetime = (SELECT MAX(post_datetime) FROM new_videos)")
 	if err != nil && err != sql.ErrNoRows{
 		panic(err.Error())
 	}
