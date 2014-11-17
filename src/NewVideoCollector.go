@@ -49,7 +49,7 @@ func getDbConnection() *sql.DB {
 func selectLastCollectedVideo() (string, string) {
 	var videoId string
 	var postDateTime string
-	err := db.QueryRow("SELECT id, post_datetime FROM new_videos ORDER BY post_datetime DESC, id DESC LIMIT 1").Scan(&videoId, &postDateTime)
+	err := db.QueryRow("SELECT id, post_datetime FROM new_videos ORDER BY serial_no DESC LIMIT 1").Scan(&videoId, &postDateTime)
 	if err != nil && err != sql.ErrNoRows{
 		panic(err.Error())
 	}
@@ -127,6 +127,10 @@ func registerNewVideos(videos *list.List) {
 		recentlyVideoRows.Scan(&recentlyMovieNo)
 	}
 
+	insertCount := 0
+	startVideoId := ""
+	endVideoId := ""
+
 	videoLoop: for video := videos.Back(); video != nil; video = video.Prev() {
 
 		// すでに登録されている動画はスキップする
@@ -145,12 +149,20 @@ func registerNewVideos(videos *list.List) {
 		}
 		defer stmtIns.Close()
 
-		fmt.Println(videoObj["id"], " ", videoObj["datetime"], " ", videoObj["title"])
+		// fmt.Println(videoObj["id"], " ", videoObj["datetime"], " ", videoObj["title"])
+		insertCount++
+		if startVideoId == "" {
+			startVideoId = videoObj["id"]
+		}
+		endVideoId = videoObj["id"]
+
 		_, insErr := stmtIns.Exec(videoObj["id"], videoObj["title"], videoObj["datetime"], 0)
 		if insErr != nil {
 			panic(insErr.Error())
 		}
 	}
+
+	fmt.Println("insertCount=[", insertCount, "] startVideoId=[", startVideoId, "] endVideoId=[", endVideoId, "]")
 }
 
 func selectRecentlyVideos() *sql.Rows {
