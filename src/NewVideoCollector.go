@@ -59,15 +59,11 @@ func selectLastCollectedVideo() (string, string) {
 
 func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 	count := 0
+	breakCount := 0
 	limit := 300
-
-//	if endVideoId == "" || endDateTime == "" {
-//		count = 0
-//		limit = 101
-//	}
-
 	videos := list.New()
 	next := true;
+
 	for pageNo := 1; next; pageNo++ {
 		doc := getSearchResultDoc(pageNo)
 
@@ -94,7 +90,12 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 				panic("投稿日時の長さがおかしいですよ")
 			}
 
-			if videoId == endVideoId || postDatetime < endDateTime || (limit != 0 && limit <= count) {
+			if postDatetime < endDateTime {
+				breakCount++
+			}
+
+			// 読み込み中断判定
+			if (endVideoId != "" && 5 <= breakCount) || (limit != 0 && limit <= count) {
 				next = false;
 				return;
 			}
@@ -120,21 +121,6 @@ func getSearchResultDoc(pageNo int) *goquery.Document {
 }
 
 func registerNewVideos(videos *list.List) {
-	recentlyVideoRows := selectRecentlyVideos()
-
-	for recentlyVideoRows.Next() {
-		var recentlyMovieNo string
-		recentlyVideoRows.Scan(&recentlyMovieNo)
-
-		// すでに登録されている動画はスキップする
-		for video := videos.Back(); video != nil; video = video.Prev() {
-			videoObj := video.Value.(map[string]string)
-			if recentlyMovieNo == videoObj["id"] {
-				videos.Remove(video)
-			}
-		}
-	}
-
 	insertCount := 0
 	startVideoId := ""
 	endVideoId := ""
@@ -142,9 +128,13 @@ func registerNewVideos(videos *list.List) {
 	for video := videos.Back(); video != nil; video = video.Prev() {
 		videoObj := video.Value.(map[string]string)
 
-		stmtIns, stmtErr := db.Prepare("INSERT INTO new_videos (id, title, post_datetime, status) VALUES( ?, ?, ?, ?)")
-		if stmtErr != nil {
-			panic(stmtErr.Error())
+		if isExistsVideo(videoObj["id"]) {
+			continue
+		}
+
+		stmtIns, stmtInsErr := db.Prepare("INSERT INTO new_videos (id, title, post_datetime, status) VALUES( ?, ?, ?, ?)")
+		if stmtInsErr != nil {
+			panic(stmtInsErr.Error())
 		}
 		defer stmtIns.Close()
 
@@ -164,14 +154,25 @@ func registerNewVideos(videos *list.List) {
 	fmt.Println("insertCount=[", insertCount, "] startVideoId=[", startVideoId, "] endVideoId=[", endVideoId, "]")
 }
 
-func selectRecentlyVideos() *sql.Rows {
+func isExistsVideo(videoId string) bool {
 
-	videoIdRows, err := db.Query("SELECT id FROM new_videos WHERE post_datetime = (SELECT MAX(post_datetime) FROM new_videos)")
-	if err != nil && err != sql.ErrNoRows{
+	stmt, stmtErr := db.Prepare("SELECT count(id) FROM new_videos WHERE id = ?")
+	if stmtErr != nil {
+		panic(stmtErr.Error())
+	}
+	defer stmt.Close()
+
+	var count string
+	err := stmt.QueryRow(videoId).Scan(&count)
+	if err != nil && err != sql.ErrNoRows {
 		panic(err.Error())
 	}
 
-	return videoIdRows
+	if count == "1" {
+		return true
+	} else {
+		return false
+	}
 }
 
 func main() {
