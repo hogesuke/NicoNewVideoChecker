@@ -112,20 +112,20 @@ type Tags struct {
 	Tag []string `xml:"tag"`
 }
 
-func registerVideoDetails(tx *sql.Tx, video Thumb, videoId string, postDatetime string) {
-	insertVideo(tx, video, videoId, postDatetime)
+func registerVideoDetails(tx *sql.Tx, video Thumb, videoId string, postDatetime string, videoPrefix string) {
+	insertVideo(tx, video, videoId, postDatetime, videoPrefix)
 	registerTags(tx, video.Thumb.Tags, videoId)
 	registerContributor(tx, video, videoId)
 	updateNewVideo(tx, videoId, 1)
 }
 
-func insertVideo(tx *sql.Tx, video Thumb, videoId string, postDatetime string) {
+func insertVideo(tx *sql.Tx, video Thumb, videoId string, postDatetime string, videoPrefix string) {
 	stmtIns, stmtErr := tx.Prepare(`
 	INSERT INTO videos
 	(id, title, description, contributor_id, contributor_name,
 	thumbnail_url, post_datetime, length,
-	view_counter, comment_counter, mylist_counter)
-	VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	view_counter, comment_counter, mylist_counter, prefix)
+	VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 
 	if stmtErr != nil {
 		panic(stmtErr.Error())
@@ -143,7 +143,8 @@ func insertVideo(tx *sql.Tx, video Thumb, videoId string, postDatetime string) {
 		video.Thumb.Length,
 		video.Thumb.ViewCounter,
 		video.Thumb.CommentNum,
-		video.Thumb.MylistCounter)
+		video.Thumb.MylistCounter,
+		videoPrefix)
 
 	if insErr != nil {
 		panic(insErr.Error())
@@ -292,10 +293,12 @@ func main() {
 
 		videoRows.Scan(&videoId, &postDatetime)
 
-		moviePrefix := []string{"sm", "nm"}
-		for _, prefix := range moviePrefix {
+		var fixedPrefix string
+		videoPrefix := []string{"sm", "nm"}
+		for _, prefix := range videoPrefix {
 			videoDetails = getVideoDetails(videoId, prefix)
 			if videoDetails.Status != "fail" {
+				fixedPrefix = prefix
 				break
 			}
 		}
@@ -314,7 +317,7 @@ func main() {
 		if videoDetails.Status == "fail" {
 			updateNewVideo(tx, videoId, 9)
 		} else {
-			registerVideoDetails(tx, videoDetails, videoId, postDatetime)
+			registerVideoDetails(tx, videoDetails, videoId, postDatetime, fixedPrefix)
 		}
 		tx.Commit()
 	}

@@ -12,6 +12,7 @@ CREATE TABLE new_videos (
 CREATE TABLE videos (
   serial_no INT AUTO_INCREMENT,
   id INT,
+  prefix VARCHAR(10),
   title NVARCHAR(255),
   description NVARCHAR(2047),
   contributor_id INT,
