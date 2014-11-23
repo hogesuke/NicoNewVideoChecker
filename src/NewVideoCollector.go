@@ -95,7 +95,7 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 			}
 
 			// 読み込み中断判定
-			if (endVideoId != "" && 5 <= breakCount) || (limit != 0 && limit <= count) {
+			if (endVideoId != "" && 50 <= breakCount) || (limit != 0 && limit <= count) {
 				next = false;
 				return;
 			}
