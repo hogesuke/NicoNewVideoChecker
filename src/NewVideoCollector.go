@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"strconv"
+	"strings"
 )
 
 /** configuration */
@@ -57,11 +58,10 @@ func selectLastCollectedVideo() (string, string) {
 	return videoId, postDateTime
 }
 
-func collectNewVideo(endVideoId string, endDateTime string) *list.List {
+func collectNewVideo(endVideoId string, endDateTime string, videos *list.List) {
 	count := 0
 	breakCount := 0
 	limit := 300
-	videos := list.New()
 	next := true;
 
 	for pageNo := 1; next; pageNo++ {
@@ -84,6 +84,64 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 				if nowMonth < postMonth {
 					postDatetime = fmt.Sprint(time.Now().AddDate(-1, 0, 0).Year()) + postDatetime
 				} else {
+					postDatetime = fmt.Sprint(time.Now().Year()) + postDatetime
+				}
+			} else {
+				panic("投稿日時の長さがおかしいですよ")
+			}
+
+			if postDatetime < endDateTime {
+				breakCount++
+			}
+
+			// 読み込み中断判定
+			if (endVideoId != "" && 50 <= breakCount) || (limit != 0 && limit <= count) {
+				next = false;
+				count++
+				return;
+			}
+
+			isNewVideo := true
+			for vi := videos.Front(); vi != nil; vi = vi.Next() {
+				viMap := vi.Value.(map[string]string)
+				if videoId == viMap["id"] {
+					isNewVideo = false
+					continue
+				}
+			}
+
+			if isNewVideo {
+				videoMap := map[string]string{"id": videoId, "datetime": postDatetime, "title": title}
+				videos.PushBack(videoMap)
+			}
+			count++
+		})
+	}
+}
+
+func collectNewVideoByCategory(endVideoId string, endDateTime string, tags []string, videos *list.List) {
+	count := 0
+	breakCount := 0
+	limit := 100
+	next := true;
+
+	for pageNo := 1; next; pageNo++ {
+		doc := getSearchResultDocByCategory(pageNo, tags)
+
+		doc.Find(".contentBody.uad:not(.searchUad).video .item").Each(func(_ int, s *goquery.Selection) {
+			rawVideoId, _ := s.Attr("data-id")
+			videoId := regexp.MustCompile("[0-9]+").FindString(rawVideoId)
+			postDatetime := regexp.MustCompile("[ /:]").ReplaceAllString(s.Find(".itemTime .time:not(.new)").Text(), "")
+			title, _ := s.Find(".itemTitle a").Attr("title")
+
+			if len(postDatetime) == 10 {
+				postDatetime = "20" + postDatetime
+			} else if len(postDatetime) == 8 {
+				postMonth, _ := strconv.Atoi(postDatetime[0:2])
+				nowMonth := int(time.Now().Month())
+				if nowMonth < postMonth {
+					postDatetime = fmt.Sprint(time.Now().AddDate(-1, 0, 0).Year()) + postDatetime
+				} else {
 					postDatetime = fmt.Sprint(time.Now().Year())+postDatetime
 				}
 			} else {
@@ -99,18 +157,36 @@ func collectNewVideo(endVideoId string, endDateTime string) *list.List {
 				next = false;
 				return;
 			}
+
+			for vi := videos.Front(); vi != nil; vi = vi.Next() {
+				viMap := vi.Value.(map[string]string)
+				if videoId == viMap["id"] {
+					continue
+				}
+			}
+
 			videoMap := map[string]string{"id": videoId, "datetime": postDatetime, "title": title}
 			videos.PushBack(videoMap)
 			count++
 		})
 	}
-
-	return videos
 }
 
 func getSearchResultDoc(pageNo int) *goquery.Document {
 	url := "http://www.nicovideo.jp/newarrival"
 	hash := "?sort=f&page=" + fmt.Sprint(pageNo)
+
+	doc, err:= goquery.NewDocument(url + hash)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return doc
+}
+
+func getSearchResultDocByCategory(pageNo int, tags []string) *goquery.Document {
+	url := "http://www.nicovideo.jp/tag/" + strings.Join(tags, " or ")
+	hash := "?sort=f&order=d&ref=cate_newall&page=" + fmt.Sprint(pageNo)
 
 	doc, err:= goquery.NewDocument(url + hash)
 	if err != nil {
@@ -180,6 +256,28 @@ func main() {
 	db = getDbConnection()
 	defer db.Close()
 
-	videos := collectNewVideo(selectLastCollectedVideo())
+	lastVideoId, lastPostDateTime := selectLastCollectedVideo()
+	tagsSlice := [][]string{
+		[]string{"エンターテイメント", "音楽", "歌ってみた", "演奏してみた", "踊ってみた", "VOCALOID", "ニコニコインディーズ"},
+		[]string{"動物", "料理", "自然", "旅行", "スポーツ", "ニコニコ動画講座", "車載動画", "歴史", "政治", "科学"},
+		[]string{"ニコニコ技術部", "ニコニコ手芸部", "作ってみた", "アニメ", "ゲーム", "東方", "アイドルマスター", "ラジオ", "描いてみた"},
+		[]string{"例のアレ", "日記", "その他"}}
+
+	videos := list.New()
+	for _, tags := range tagsSlice {
+		collectNewVideoByCategory(lastVideoId, lastPostDateTime, tags, videos)
+	}
+
+	if lastPostDateTime == "" {
+		lastPostDateTime = "999999999999"
+		for vi := videos.Front(); vi != nil; vi = vi.Next() {
+			viMap := vi.Value.(map[string]string)
+			if viMap["datetime"] < lastPostDateTime {
+				lastPostDateTime = viMap["datetime"]
+				lastVideoId = viMap["id"]
+			}
+		}
+	}
+	collectNewVideo(lastVideoId, lastPostDateTime, videos)
 	registerNewVideos(videos)
 }
