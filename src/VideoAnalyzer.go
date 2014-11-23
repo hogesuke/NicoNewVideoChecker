@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"encoding/xml"
 	"encoding/json"
+	"time"
 )
 
 /** configuration */
@@ -52,6 +53,9 @@ func selectNewVideos() *sql.Rows {
 }
 
 func getVideoDetails(videoId string) Thumb {
+	// スリープで短時間での連続アクセスを避ける
+	time.Sleep(300 * time.Millisecond)
+
 	url := "http://ext.nicovideo.jp/api/getthumbinfo/sm"
 	res, err := http.Get(url + videoId)
 	if err != nil {
