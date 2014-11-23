@@ -52,11 +52,11 @@ func selectNewVideos() *sql.Rows {
 	return videoIdRows
 }
 
-func getVideoDetails(videoId string) Thumb {
+func getVideoDetails(videoId string, prefix string) Thumb {
 	// スリープで短時間での連続アクセスを避ける
 	time.Sleep(300 * time.Millisecond)
 
-	url := "http://ext.nicovideo.jp/api/getthumbinfo/sm"
+	url := "http://ext.nicovideo.jp/api/getthumbinfo/" + prefix
 	res, err := http.Get(url + videoId)
 	if err != nil {
 		panic(err.Error())
@@ -288,8 +288,17 @@ func main() {
 	for videoRows.Next() {
 		var videoId string
 		var postDatetime string
+		var videoDetails Thumb
+
 		videoRows.Scan(&videoId, &postDatetime)
-		videoDetails := getVideoDetails(videoId)
+
+		moviePrefix := []string{"sm", "nm"}
+		for _, prefix := range moviePrefix {
+			videoDetails = getVideoDetails(videoId, prefix)
+			if videoDetails.Status != "fail" {
+				break
+			}
+		}
 
 		tx, err := db.Begin()
 		if err != nil {
