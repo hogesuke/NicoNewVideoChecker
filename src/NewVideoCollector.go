@@ -227,7 +227,7 @@ func registerNewVideos(videos *list.List) {
 		}
 	}
 
-	fmt.Println("insertCount=[", insertCount, "] startVideoId=[", startVideoId, "] endVideoId=[", endVideoId, "]")
+	fmt.Println("datetime=[" + time.Now().String() + "] insertCount=[" + fmt.Sprint(insertCount) + "] startVideoId=[" + startVideoId + "] endVideoId=[" + endVideoId + "]")
 }
 
 func isExistsVideo(videoId string) bool {
