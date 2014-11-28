@@ -95,7 +95,7 @@ func collectNewVideo(endVideoId string, endDateTime string, videos *list.List) {
 			}
 
 			// 読み込み中断判定
-			if (endVideoId != "" && 50 <= breakCount) || (limit != 0 && limit <= count) {
+			if (endVideoId != "" && 100 <= breakCount) || (limit != 0 && limit <= count) {
 				next = false;
 				count++
 				return;
@@ -153,7 +153,7 @@ func collectNewVideoByCategory(endVideoId string, endDateTime string, tags []str
 			}
 
 			// 読み込み中断判定
-			if (endVideoId != "" && 50 <= breakCount) || (limit != 0 && limit <= count) {
+			if (endVideoId != "" && 100 <= breakCount) || (limit != 0 && limit <= count) {
 				next = false;
 				return;
 			}
@@ -176,6 +176,9 @@ func getSearchResultDoc(pageNo int) *goquery.Document {
 	url := "http://www.nicovideo.jp/newarrival"
 	hash := "?sort=f&page=" + fmt.Sprint(pageNo)
 
+	// スリープで短時間での連続アクセスを避ける
+	time.Sleep(300 * time.Millisecond)
+
 	doc, err:= goquery.NewDocument(url + hash)
 	if err != nil {
 		panic(err.Error())
@@ -187,6 +190,9 @@ func getSearchResultDoc(pageNo int) *goquery.Document {
 func getSearchResultDocByCategory(pageNo int, tags []string) *goquery.Document {
 	url := "http://www.nicovideo.jp/tag/" + strings.Join(tags, " or ")
 	hash := "?sort=f&order=d&ref=cate_newall&page=" + fmt.Sprint(pageNo)
+
+	// スリープで短時間での連続アクセスを避ける
+	time.Sleep(300 * time.Millisecond)
 
 	doc, err:= goquery.NewDocument(url + hash)
 	if err != nil {
@@ -258,10 +264,13 @@ func main() {
 
 	lastVideoId, lastPostDateTime := selectLastCollectedVideo()
 	tagsSlice := [][]string{
-		[]string{"エンターテイメント", "音楽", "歌ってみた", "演奏してみた", "踊ってみた", "VOCALOID", "ニコニコインディーズ"},
+		[]string{"エンターテイメント", "音楽", "歌ってみた", "演奏してみた", "踊ってみた"},
 		[]string{"動物", "料理", "自然", "旅行", "スポーツ", "ニコニコ動画講座", "車載動画", "歴史", "政治", "科学"},
-		[]string{"ニコニコ技術部", "ニコニコ手芸部", "作ってみた", "アニメ", "ゲーム", "東方", "アイドルマスター", "ラジオ", "描いてみた"},
-		[]string{"例のアレ", "日記", "その他"}}
+		[]string{"ニコニコ技術部", "ニコニコ手芸部", "作ってみた", "描いてみた"},
+		[]string{"例のアレ", "日記", "その他"},
+		[]string{"VOCALOID", "ニコニコインディーズ"},
+		[]string{"アニメ", "東方", "アイドルマスター", "ラジオ"},
+		[]string{"ゲーム"}}
 
 	videos := list.New()
 	for _, tags := range tagsSlice {
