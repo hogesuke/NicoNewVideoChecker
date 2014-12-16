@@ -200,7 +200,7 @@ func insertTag(tx *sql.Tx, tag string) {
 func insertVideoTagRelation(tx *sql.Tx, videoId string, tagId string) {
 	// 存在チェック
 	// ※アルファベット長音記号の有無を区別できずにコンフリクトが発生するため
-	stmt, stmtErr := tx.Prepare("SELECT count(id) FROM videos_tags WHERE video_id = ? AND tag_id = ?")
+	stmt, stmtErr := tx.Prepare("SELECT count(video_id) FROM videos_tags WHERE video_id = ? AND tag_id = ?")
 	if stmtErr != nil {
 		panic(stmtErr.Error())
 	}
