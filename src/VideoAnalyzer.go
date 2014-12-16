@@ -198,6 +198,25 @@ func insertTag(tx *sql.Tx, tag string) {
 }
 
 func insertVideoTagRelation(tx *sql.Tx, videoId string, tagId string) {
+	// 存在チェック
+	// ※アルファベット長音記号の有無を区別できずにコンフリクトが発生するため
+	stmt, stmtErr := tx.Prepare("SELECT count(id) FROM videos_tags WHERE video_id = ? AND tag_id = ?")
+	if stmtErr != nil {
+		panic(stmtErr.Error())
+	}
+	defer stmt.Close()
+
+	var count int
+	err := stmt.QueryRow(videoId, tagId).Scan(&count)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer stmt.Close()
+
+	if count > 0 {
+		return
+	}
+
 	stmtIns, stmtInsErr := tx.Prepare("INSERT INTO videos_tags (video_id, tag_id) VALUES(?, ?)")
 	if stmtInsErr != nil {
 		panic(stmtInsErr.Error())
