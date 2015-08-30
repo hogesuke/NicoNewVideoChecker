@@ -114,7 +114,8 @@ type Tags struct {
 
 func registerVideoDetails(tx *sql.Tx, video Thumb, videoId string, postDatetime string, videoPrefix string) {
 	insertVideo(tx, video, videoId, postDatetime, videoPrefix)
-	registerTags(tx, video.Thumb.Tags, videoId)
+	// タグの登録は一旦なしにする
+	// registerTags(tx, video.Thumb.Tags, videoId)
 	registerContributor(tx, video, videoId)
 	updateNewVideo(tx, videoId, 1)
 }
