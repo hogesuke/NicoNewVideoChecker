@@ -54,7 +54,7 @@ func selectNewVideos() *sql.Rows {
 
 func getVideoDetails(videoId string, prefix string) Thumb {
 	// スリープで短時間での連続アクセスを避ける
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 
 	url := "http://ext.nicovideo.jp/api/getthumbinfo/" + prefix
 	res, err := http.Get(url + videoId)
