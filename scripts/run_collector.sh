@@ -1,4 +1,5 @@
 #!/bin/sh
 
-cd /home/hogesuke/nicotune/NicoNewVideoChecker/
-./src/NewVideoCollector >> ./collector.log
+cd `dirname $0`
+
+../src/NewVideoCollector >> ./collector.log

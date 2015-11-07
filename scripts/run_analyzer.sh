@@ -1,4 +1,5 @@
 #!/bin/sh
 
-cd /home/hogesuke/nicotune/NicoNewVideoChecker/
-./src/VideoAnalyzer
+cd `dirname $0`
+
+../src/VideoAnalyzer
