@@ -273,6 +273,24 @@ func insertContributor(tx *sql.Tx, contributorId string, contributorName string,
 }
 
 func insertVideoContributorRelation(tx *sql.Tx, videoId string, contributorId string) {
+	// 存在チェック
+	stmt, stmtErr := tx.Prepare("SELECT count(video_id) FROM videos_contributors WHERE video_id = ? AND contributor_id = ?")
+	if stmtErr != nil {
+		panic(stmtErr.Error())
+	}
+	defer stmt.Close()
+
+	var count int
+	err := stmt.QueryRow(videoId, contributorId).Scan(&count)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer stmt.Close()
+
+	if count > 0 {
+		return
+	}
+
 	stmtIns, stmtInsErr := tx.Prepare("INSERT INTO videos_contributors (video_id, contributor_id) VALUES(?, ?)")
 	if stmtInsErr != nil {
 		panic(stmtInsErr.Error())
