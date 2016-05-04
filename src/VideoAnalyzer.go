@@ -136,7 +136,8 @@ func insertVideo(tx *sql.Tx, video Thumb, videoId string, postDatetime string, v
 	_, insErr := stmtIns.Exec(
 		videoId,
 		video.Thumb.Title,
-		video.Thumb.Description,
+		// video.Thumb.Description // 説明が長すぎる場合に登録に失敗するので一旦空文字とする,
+		"",
 		video.Thumb.ContributorId,
 		video.Thumb.ContributorName,
 		video.Thumb.ThumbnailUrl,
