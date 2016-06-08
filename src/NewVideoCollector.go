@@ -125,7 +125,10 @@ func collectNewVideoByCategory(endVideoId string, endDateTime string, tags []str
 	limit := 100
 	next := true;
 
-	for pageNo := 1; next; pageNo++ {
+	for pageNo := 1; next && pageNo <= 100; pageNo++ {
+		// スリープで短時間での連続アクセスを避ける
+		time.Sleep(1000 * time.Millisecond)
+
 		doc := getSearchResultDocByCategory(pageNo, tags)
 
 		doc.Find(".contentBody.uad:not(.searchUad).video .item").Each(func(_ int, s *goquery.Selection) {
