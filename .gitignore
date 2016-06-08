@@ -72,3 +72,10 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+# log
+collector.log
+
+# binary
+src/NewVideoCollector
+src/VideoAnalyzer
