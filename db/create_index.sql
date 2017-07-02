@@ -1,5 +1,6 @@
 ALTER TABLE new_videos ADD INDEX new_videos_id(id);
 ALTER TABLE videos ADD INDEX videos_id(id);
+ALTER TABLE videos ADD INDEX videos_contributor_id(contributor_id);
 ALTER TABLE videos_categories ADD INDEX videos_categories_id(video_id);
 ALTER TABLE videos_contributors ADD INDEX videos_contributors_id(video_id);
 ALTER TABLE videos_tags ADD INDEX videos_tags_id(video_id);
