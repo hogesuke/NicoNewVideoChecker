@@ -87,7 +87,7 @@ func collectNewVideo(endVideoId string, endDateTime string, videos *list.List) {
 					postDatetime = fmt.Sprint(time.Now().Year()) + postDatetime
 				}
 			} else {
-				panic("投稿日時の長さがおかしいですよ")
+				panic("投稿日時の長さがおかしいですよ:" +  postDatetime)
 			}
 
 			if postDatetime < endDateTime {
@@ -131,8 +131,8 @@ func collectNewVideoByCategory(endVideoId string, endDateTime string, tags []str
 
 		doc := getSearchResultDocByCategory(pageNo, tags)
 
-		doc.Find(".contentBody.uad:not(.searchUad).video .item").Each(func(_ int, s *goquery.Selection) {
-			rawVideoId, _ := s.Attr("data-id")
+		doc.Find(".contentBody.uad:not(.searchUad).video .list:not(.videoListSkeleton) .item:not(.nicoadVideoItem)").Each(func(_ int, s *goquery.Selection) {
+			rawVideoId, _ := s.Attr("data-video-id")
 			videoId := regexp.MustCompile("[0-9]+").FindString(rawVideoId)
 			postDatetime := regexp.MustCompile("[ /:]").ReplaceAllString(s.Find(".itemTime .time:not(.new)").Text(), "")
 			title, _ := s.Find(".itemTitle a").Attr("title")
@@ -148,7 +148,7 @@ func collectNewVideoByCategory(endVideoId string, endDateTime string, tags []str
 					postDatetime = fmt.Sprint(time.Now().Year())+postDatetime
 				}
 			} else {
-				panic("投稿日時の長さがおかしいですよ")
+				panic("投稿日時の長さがおかしいですよ:" +  postDatetime)
 			}
 
 			if postDatetime < endDateTime {
